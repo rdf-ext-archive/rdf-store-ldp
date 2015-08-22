@@ -8,7 +8,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/nicola/rdf-store-ldp.git"
+    "url": "https://github.com/rdf-ext/rdf-store-ldp.git"
   },
   "keywords": [
     "rdf-stores",
@@ -19,9 +19,9 @@
   "author": "Nicola Greco <me@nicola.io> (http://nicolagreco.com/)",
   "license": "MIT",
   "bugs": {
-    "url": "https://github.com/nicola/rdf-store-ldp/issues"
+    "url": "https://github.com/rdf-ext/rdf-store-ldp/issues"
   },
-  "homepage": "https://github.com/nicola/rdf-store-ldp",
+  "homepage": "https://github.com/rdf-ext/rdf-store-ldp",
   "devDependencies": {
     "mocha": "^2.2.5",
     "rdf-ext": "^0.2.6"
