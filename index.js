@@ -52,8 +52,8 @@ function LdpStore (rdf, options) {
         var contentType = self.defaultParser;
 
         // ...if content-type is not given or unknown
-        if ('content-type' in headers && headers['content-type'] in self.parsers) {
-          contentType = headers['content-type'];
+        if ('content-type' in headers && headers['content-type'].split(';')[0] in self.parsers) {
+          contentType = headers['content-type'].split(';')[0];
         }
         
         // and override if set in options
