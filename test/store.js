@@ -134,7 +134,11 @@ describe('LdpStore', function () {
       var options = {
         request: createClient(function () {
           return {statusCode: 0}
-        })
+        }),
+        parsers: {
+          '1': createParser()
+        },
+        defaultParser: '1'
       }
 
       var store = new LdpStore(rdf, options)
