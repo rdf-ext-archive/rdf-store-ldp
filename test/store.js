@@ -254,7 +254,7 @@ describe('LdpStore', function () {
 
       store.graph('http://example.org/', function (graph, error) {
         assert.equal(graph, null)
-        assert(!error)
+        assert(!!error)
 
         done()
       })
@@ -275,7 +275,7 @@ describe('LdpStore', function () {
 
       store.graph('http://example.org/', function (graph, error) {
         assert.notEqual(graph, null)
-        assert(!!error)
+        assert(!error)
 
         done()
       })
@@ -296,7 +296,7 @@ describe('LdpStore', function () {
         assert.equal(typeof graph, 'object')
         assert.equal(graph.length, 0)
         assert.equal(typeof graph.match, 'function')
-        assert(error)
+        assert(!error)
 
         done()
       })
@@ -317,7 +317,7 @@ describe('LdpStore', function () {
 
       store.graph('http://example.org/', function (graph, error) {
         assert.equal(graph.etag, 'test')
-        assert(error)
+        assert(!error)
 
         done()
       }, {useEtag: true})
