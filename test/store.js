@@ -38,7 +38,7 @@ var createParser = function (buildGraphData) {
 
     graphData = graphData || {graph: rdf.createGraph()}
 
-    callback(graphData.graph, graphData.error)
+    callback(graphData.error, graphData.graph)
   }
 }
 
@@ -105,8 +105,8 @@ describe('LdpStore', function () {
 
       var store = new LdpStore(rdf, options)
 
-      store.graph('http://example.org/', function (graph, error) {
-        assert.equal(graph, null)
+      store.graph('http://example.org/', function (error, graph) {
+        assert(!graph)
         assert(!!error)
 
         done()
@@ -122,8 +122,8 @@ describe('LdpStore', function () {
 
       var store = new LdpStore(rdf, options)
 
-      store.graph('http://example.org/', function (graph, error) {
-        assert.equal(graph, null)
+      store.graph('http://example.org/', function (error, graph) {
+        assert(!graph)
         assert(!!error)
 
         done()
@@ -143,8 +143,8 @@ describe('LdpStore', function () {
 
       var store = new LdpStore(rdf, options)
 
-      store.graph('http://example.org/', function (graph, error) {
-        assert.notEqual(graph, null)
+      store.graph('http://example.org/', function (error, graph) {
+        assert(!!graph)
         assert(!error)
 
         done()
@@ -252,8 +252,8 @@ describe('LdpStore', function () {
 
       var store = new LdpStore(rdf, options)
 
-      store.graph('http://example.org/', function (graph, error) {
-        assert.equal(graph, null)
+      store.graph('http://example.org/', function (error, graph) {
+        assert(!graph)
         assert(!!error)
 
         done()
@@ -273,8 +273,8 @@ describe('LdpStore', function () {
 
       var store = new LdpStore(rdf, options)
 
-      store.graph('http://example.org/', function (graph, error) {
-        assert.notEqual(graph, null)
+      store.graph('http://example.org/', function (error, graph) {
+        assert(!!graph)
         assert(!error)
 
         done()
@@ -292,7 +292,7 @@ describe('LdpStore', function () {
 
       var store = new LdpStore(rdf, options)
 
-      store.graph('http://example.org/', function (graph, error) {
+      store.graph('http://example.org/', function (error, graph) {
         assert.equal(typeof graph, 'object')
         assert.equal(graph.length, 0)
         assert.equal(typeof graph.match, 'function')
@@ -315,7 +315,7 @@ describe('LdpStore', function () {
 
       var store = new LdpStore(rdf, options)
 
-      store.graph('http://example.org/', function (graph, error) {
+      store.graph('http://example.org/', function (error, graph) {
         assert.equal(graph.etag, 'test')
         assert(!error)
 
@@ -334,8 +334,8 @@ describe('LdpStore', function () {
 
       var store = new LdpStore(rdf, options)
 
-      store.match('http://example.org/', null, null, null, function (graph, error) {
-        assert.equal(graph, null)
+      store.match('http://example.org/', null, null, null, function (error, graph) {
+        assert(!graph)
         assert(!!error)
 
         done()
@@ -379,7 +379,7 @@ describe('LdpStore', function () {
 
       var store = new LdpStore(rdf, options)
 
-      store.match('http://example.org/', null, null, null, function (graph, error) {
+      store.match('http://example.org/', null, null, null, function (error, graph) {
         assert.equal(typeof graph, 'object')
         assert.equal(graph.length, 0)
         assert.equal(typeof graph.match, 'function')
@@ -512,8 +512,8 @@ describe('LdpStore', function () {
 
       var store = new LdpStore(rdf, options)
 
-      store.add('http://example.org/', null, function (graph, error) {
-        assert.equal(graph, null)
+      store.add('http://example.org/', null, function (error, graph) {
+        assert(!graph)
         assert(!!error)
 
         done()
@@ -533,8 +533,8 @@ describe('LdpStore', function () {
 
       var store = new LdpStore(rdf, options)
 
-      store.add('http://example.org/', null, function (graph, error) {
-        assert.equal(graph, null)
+      store.add('http://example.org/', null, function (error, graph) {
+        assert(!graph)
         assert(!!error)
 
         done()
@@ -554,8 +554,8 @@ describe('LdpStore', function () {
 
       var store = new LdpStore(rdf, options)
 
-      store.add('http://example.org/', null, function (graph, error) {
-        assert.equal(graph, null)
+      store.add('http://example.org/', null, function (error, graph) {
+        assert(!graph)
         assert(!!error)
 
         done()
@@ -573,7 +573,7 @@ describe('LdpStore', function () {
 
       var store = new LdpStore(rdf, options)
 
-      store.add('http://example.org/', 'test', function (graph, error) {
+      store.add('http://example.org/', 'test', function (error, graph) {
         assert.equal(graph, 'test')
         assert(!error)
 
@@ -686,8 +686,8 @@ describe('LdpStore', function () {
 
       var store = new LdpStore(rdf, options)
 
-      store.merge('http://example.org/', null, function (graph, error) {
-        assert.equal(graph, null)
+      store.merge('http://example.org/', null, function (error, graph) {
+        assert(!graph)
         assert(!!error)
 
         done()
@@ -707,8 +707,8 @@ describe('LdpStore', function () {
 
       var store = new LdpStore(rdf, options)
 
-      store.merge('http://example.org/', null, function (graph, error) {
-        assert.equal(graph, null)
+      store.merge('http://example.org/', null, function (error, graph) {
+        assert(!graph)
         assert(!!error)
 
         done()
@@ -728,8 +728,8 @@ describe('LdpStore', function () {
 
       var store = new LdpStore(rdf, options)
 
-      store.merge('http://example.org/', null, function (graph, error) {
-        assert.equal(graph, null)
+      store.merge('http://example.org/', null, function (error, graph) {
+        assert(!graph)
         assert(!!error)
 
         done()
@@ -747,7 +747,7 @@ describe('LdpStore', function () {
 
       var store = new LdpStore(rdf, options)
 
-      store.merge('http://example.org/', 'test', function (graph, error) {
+      store.merge('http://example.org/', 'test', function (error, graph) {
         assert.equal(graph, 'test')
         assert(!error)
 
@@ -788,8 +788,8 @@ describe('LdpStore', function () {
 
       var store = new LdpStore(rdf, options)
 
-      store.delete('http://example.org/', function (success) {
-        assert.equal(success, false)
+      store.delete('http://example.org/', function (error) {
+        assert(!!error)
 
         done()
       })
@@ -804,22 +804,22 @@ describe('LdpStore', function () {
 
       var store = new LdpStore(rdf, options)
 
-      store.delete('http://example.org/', function (success) {
-        assert.equal(success, false)
+      store.delete('http://example.org/', function (error) {
+        assert(!!error)
 
         done()
       })
     })
 
-    it('should return true on success', function (done) {
+    it('should return no error on success', function (done) {
       var options = {
         request: createClient()
       }
 
       var store = new LdpStore(rdf, options)
 
-      store.delete('http://example.org/', function (success) {
-        assert.equal(success, true)
+      store.delete('http://example.org/', function (error) {
+        assert(!error)
 
         done()
       })

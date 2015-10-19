@@ -37,14 +37,14 @@ function LdpStore (rdf, options) {
       function (statusCode, headers, content, error) {
         // error during request
         if (error) {
-          return callback(null, 'request error: ' + error);
+          return callback('request error: ' + error);
         }
 
         // http status code != success
         if (!httpSuccess(statusCode)) {
           // in case of GET allow statusCode of 0 for browser local load
           if (statusCode !== 0) {
-            return callback(null, 'status code error: ' + statusCode);
+            return callback('status code error: ' + statusCode);
           }
         }
 
@@ -61,10 +61,10 @@ function LdpStore (rdf, options) {
           contentType = options.forceContentType;
         }
 
-        self.parsers[contentType](content, function (graph, error) {
+        self.parsers[contentType](content, function (error, graph) {
           // parser error
           if (error) {
-            return callback(null, 'parser error: ' + error);
+            return callback('parser error: ' + error);
           }
 
           // copy etag header to Graph object
@@ -72,20 +72,20 @@ function LdpStore (rdf, options) {
             graph.etag = headers.etag;
           }
 
-          callback(graph);
+          callback(null, graph);
         }, iri);
       }
     );
   };
 
   self.match = function (iri, subject, predicate, object, callback, limit) {
-    self.graph(iri, function (graph, error) {
+    self.graph(iri, function (error, graph) {
       // forward error
       if (error) {
-        return callback(null, error);
+        return callback(error);
       }
 
-      callback(graph.match(subject, predicate, object, limit));
+      callback(null, graph.match(subject, predicate, object, limit));
     });
   };
 
@@ -114,21 +114,21 @@ function LdpStore (rdf, options) {
     self.serializers[contentType](graph, function (data, error) {
       // serializer error
       if (error) {
-        return callback(null, error);
+        return callback(error);
       }
 
       self.request(method, iri, headers, data, function (statusCode, headers, content, error) {
         // error during request
         if (error) {
-          return callback(null, error);
+          return callback(error);
         }
 
         // http status code != success
         if (!httpSuccess(statusCode)) {
-          return callback(null, 'status code error: ' + statusCode);
+          return callback('status code error: ' + statusCode);
         }
 
-        callback(graph);
+        callback(null, graph);
       });
     });
   };
@@ -153,21 +153,21 @@ function LdpStore (rdf, options) {
     self.serializers[contentType](graph, function (data, error) {
       // serializer error
       if (error) {
-        return callback(null, error);
+        return callback(error);
       }
 
       self.request('PATCH', iri, headers, data, function (statusCode, headers, content, error) {
           // error during request
           if (error) {
-            return callback(null, error);
+            return callback(error);
           }
 
           // http status code != success
           if (!httpSuccess(statusCode)) {
-            return callback(null, 'status code error: ' + statusCode);
+            return callback('status code error: ' + statusCode);
           }
 
-          callback(graph);
+          callback(null, graph);
         }
       );
     });
@@ -186,15 +186,15 @@ function LdpStore (rdf, options) {
       function (statusCode, headers, content, error) {
         // error during request
         if (error) {
-          return callback(false, 'request error: ' + error);
+          return callback('request error: ' + error);
         }
 
         // http status code != success
         if (!httpSuccess(statusCode)) {
-          return callback(false, 'status code error: ' + statusCode);
+          return callback('status code error: ' + statusCode);
         }
 
-        callback(true);
+        callback();
       }
     );
   };
@@ -204,10 +204,10 @@ function LdpStore (rdf, options) {
 LdpStore.serializeSparqlUpdate = function (rdf, graph, callback) {
   rdf.serializeNTriples(graph, function (nTriples, error) {
     if (error) {
-      return callback(null, error);
+      return callback(error);
     }
 
-    callback('INSERT DATA { ' + nTriples + ' }');
+    callback(null, 'INSERT DATA { ' + nTriples + ' }');
   });
 };
 
