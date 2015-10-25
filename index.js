@@ -1,234 +1,168 @@
-'use strict';
+var mimeTypeUtil = require('rdf-mime-type-util')
+var rdf = require('rdf-ext')
+var util = require('util')
+var AbstractStore = require('rdf-store-abstract')
 
-function LdpStore (rdf, options) {
-  var self = this;
+function httpSuccess (statusCode) {
+  return (statusCode >= 200 && statusCode < 300)
+}
 
-  options = options || {};
+function LdpStore (options) {
+  options = options || {}
 
-  self.parsers = options.parsers || LdpStore.defaultParsers(rdf);
-  self.serializers = options.serializers || LdpStore.defaultSerializers(rdf);
-  self.defaultParser = options.defaultParser || 'text/turtle';
-  self.defaultSerializer = options.defaultSerializer || 'text/turtle';
-  self.defaultPatchSerializer = options.defaultPatchSerializer || options.defaultSerializer || 'text/turtle';
-  self.request = options.request || rdf.defaultRequest;
+  this.parsers = options.parsers || mimeTypeUtil.parsers
+  this.serializers = options.serializers || mimeTypeUtil.serializers
+  this.defaultParser = options.defaultParser || 'text/turtle'
+  this.defaultSerializer = options.defaultSerializer || 'text/turtle'
+  this.defaultPatchSerializer = options.defaultPatchSerializer || options.defaultSerializer || 'text/turtle'
+  this.request = options.request || rdf.defaultRequest
+}
 
-  var buildAccept = function() {
-    var accept = null;
+util.inherits(LdpStore, AbstractStore)
 
-    for (var mimeType in self.parsers) {
-      if (!accept) {
-        accept = mimeType;
+LdpStore.prototype.add = function (iri, graph, callback, options) {
+  var self = this
+
+  return new Promise(function (resolve, reject) {
+    callback = callback || function () {}
+    options = options || {}
+
+    var method = 'PUT'
+    var contentType = self.defaultSerializer
+    var headers = {}
+
+    headers['Content-Type'] = contentType
+
+    if (options.method) {
+      method = options.method
+    }
+
+    if (options.etag) {
+      headers['If-Match'] = options.etag
+    }
+
+    if (options.useEtag && graph.etag) {
+      headers['If-Match'] = graph.etag
+    }
+
+    self.serializers.serialize(contentType, graph).then(function (data) {
+      return self.request(method, iri, headers, data).then(function (res) {
+        if (!httpSuccess(res.statusCode)) {
+          callback('status code error: ' + res.statusCode)
+          return Promise.reject('status code error: ' + res.statusCode)
+        }
+
+        callback(null, graph)
+        resolve(graph)
+      })
+    }).catch(function (error) {
+      callback(error)
+      reject(error)
+    })
+  })
+}
+
+LdpStore.prototype.delete = function (iri, callback) {
+  var self = this
+
+  return new Promise(function (resolve, reject) {
+    callback = callback || function () {}
+
+    self.request('DELETE', iri, {}, null).then(function (res) {
+      if (!httpSuccess(res.statusCode)) {
+        callback('status code error: ' + res.statusCode)
+        return Promise.reject('status code error: ' + res.statusCode)
+      }
+
+      callback()
+      resolve()
+    }).catch(function (error) {
+      callback(error)
+      reject(error)
+    })
+  })
+}
+
+LdpStore.prototype.graph = function (iri, callback, options) {
+  var self = this
+
+  return new Promise(function (resolve, reject) {
+    callback = callback || function () {}
+    options = options || {}
+
+    self.request('GET', iri, {'Accept': self.parsers.list().join(', ')}).then(function (res) {
+      // also test for status code != 0 for local browser requests
+      if (!httpSuccess(res.statusCode) && res.statusCode !== 0) {
+        callback('status code error: ' + res.statusCode)
+        return Promise.reject('status code error: ' + res.statusCode)
+      }
+
+      var contentType
+
+      if (options.contentType) {
+        contentType = options.contentType
       } else {
-        accept += ', ' + mimeType;
-      }
-    }
-
-    return accept;
-  };
-
-  var httpSuccess = function (statusCode) {
-    return (statusCode >= 200 && statusCode < 300);
-  };
-
-  self.graph = function (iri, callback, options) {
-    options = options || {};
-
-    self.request('GET', iri, {'Accept': buildAccept()}, null,
-      function (statusCode, headers, content, error) {
-        // error during request
-        if (error) {
-          return callback('request error: ' + error);
+        if ('content-type' in res.headers) {
+          contentType = res.headers['content-type'].split(';')[0]
         }
 
-        // http status code != success
-        if (!httpSuccess(statusCode)) {
-          // in case of GET allow statusCode of 0 for browser local load
-          if (statusCode !== 0) {
-            return callback('status code error: ' + statusCode);
-          }
+        if (!contentType || !(contentType in self.parsers)) {
+          contentType = self.defaultParser
         }
-
-        // use default parser...
-        var contentType = self.defaultParser;
-
-        // ...if content-type is not given or unknown
-        if ('content-type' in headers && headers['content-type'].split(';')[0] in self.parsers) {
-          contentType = headers['content-type'].split(';')[0];
-        }
-        
-        // and override if set in options
-        if ('forceContentType' in options && options.forceContentType in self.parsers) {
-          contentType = options.forceContentType;
-        }
-
-        self.parsers[contentType](content, function (error, graph) {
-          // parser error
-          if (error) {
-            return callback('parser error: ' + error);
-          }
-
-          // copy etag header to Graph object
-          if ('useEtag' in options && options.useEtag && 'etag' in headers) {
-            graph.etag = headers.etag;
-          }
-
-          callback(null, graph);
-        }, iri);
-      }
-    );
-  };
-
-  self.match = function (iri, subject, predicate, object, callback, limit) {
-    self.graph(iri, function (error, graph) {
-      // forward error
-      if (error) {
-        return callback(error);
       }
 
-      callback(null, graph.match(subject, predicate, object, limit));
-    });
-  };
+      return self.parsers.parse(contentType, res.content, null, iri).then(function (graph) {
+        // copy etag header to Graph object
+        if (options.useEtag && 'etag' in res.headers) {
+          graph.etag = res.headers.etag
+        }
 
-  self.add = function (iri, graph, callback, options) {
-    var
-      method = 'PUT',
-      contentType = self.defaultSerializer,
-      headers = {};
+        callback(null, graph)
+        resolve(graph)
+      })
+    }).catch(function (error) {
+      callback(error)
+      reject(error)
+    })
+  })
+}
 
-    options = options || {};
+LdpStore.prototype.merge = function (iri, graph, callback, options) {
+  var self = this
 
-    headers['Content-Type'] = contentType;
+  return new Promise(function (resolve, reject) {
+    var contentType = self.defaultPatchSerializer
+    var headers = {}
 
-    if ('method' in options) {
-      method = options.method;
-    }
+    callback = callback || function () {}
+    options = options || {}
+
+    headers['Content-Type'] = contentType
 
     if ('etag' in options) {
-      headers['If-Match'] = options.etag;
+      headers['If-Match'] = options.etag
     }
 
     if ('useEtag' in options && options.useEtag && 'etag' in graph) {
-      headers['If-Match'] = graph.etag;
+      headers['If-Match'] = graph.etag
     }
 
-    self.serializers[contentType](graph, function (data, error) {
-      // serializer error
-      if (error) {
-        return callback(error);
-      }
-
-      self.request(method, iri, headers, data, function (statusCode, headers, content, error) {
-        // error during request
-        if (error) {
-          return callback(error);
-        }
-
-        // http status code != success
-        if (!httpSuccess(statusCode)) {
-          return callback('status code error: ' + statusCode);
-        }
-
-        callback(null, graph);
-      });
-    });
-  };
-
-  self.merge = function (iri, graph, callback, options) {
-    var
-      contentType = self.defaultPatchSerializer,
-      headers = {};
-
-    options = options || {};
-
-    headers['Content-Type'] = contentType;
-
-    if ('etag' in options) {
-      headers['If-Match'] = options.etag;
-    }
-
-    if ('useEtag' in options && options.useEtag && 'etag' in graph) {
-      headers['If-Match'] = graph.etag;
-    }
-
-    self.serializers[contentType](graph, function (data, error) {
-      // serializer error
-      if (error) {
-        return callback(error);
-      }
-
-      self.request('PATCH', iri, headers, data, function (statusCode, headers, content, error) {
-          // error during request
-          if (error) {
-            return callback(error);
+    self.serializers.serialize(contentType, graph).then(function (data) {
+      return self.request('PATCH', iri, headers, data).then(function (res) {
+          if (!httpSuccess(res.statusCode)) {
+            callback('status code error: ' + res.statusCode)
+            return Promise.reject('status code error: ' + res.statusCode)
           }
 
-          // http status code != success
-          if (!httpSuccess(statusCode)) {
-            return callback('status code error: ' + statusCode);
-          }
-
-          callback(null, graph);
+          callback(null, graph)
+          resolve(graph)
         }
-      );
-    });
-  };
-
-  self.remove = function (iri, graph, callback) {
-    //TODO: implement me
-  };
-
-  self.removeMatches = function (iri, subject, predicate, object, callback) {
-    //TODO: implement me
-  };
-
-  self.delete = function (iri, callback) {
-    self.request('DELETE', iri, {}, null,
-      function (statusCode, headers, content, error) {
-        // error during request
-        if (error) {
-          return callback('request error: ' + error);
-        }
-
-        // http status code != success
-        if (!httpSuccess(statusCode)) {
-          return callback('status code error: ' + statusCode);
-        }
-
-        callback();
-      }
-    );
-  };
-};
-
-
-LdpStore.serializeSparqlUpdate = function (rdf, graph, callback) {
-  rdf.serializeNTriples(graph, function (nTriples, error) {
-    if (error) {
-      return callback(error);
-    }
-
-    callback(null, 'INSERT DATA { ' + nTriples + ' }');
-  });
-};
-
-
-LdpStore.defaultParsers = function(rdf) {
-  return {
-    'application/ld+json': rdf.parseJsonLd,
-    'application/n-triples': rdf.parseTurtle,
-    'text/turtle': rdf.parseTurtle
-  };
-};
-
-
-LdpStore.defaultSerializers = function (rdf) {
-  return {
-    'application/ld+json': rdf.serializeJsonLd,
-    'application/n-triples': rdf.serializeNTriples,
-    'application/sparql-update': LdpStore.serializeSparqlUpdate.bind(null, rdf),
-    'text/turtle': rdf.serializeNTriples
-  };
-};
-
+      )
+    }).catch(function (error) {
+      callback(error)
+      reject(error)
+    })
+  })
+}
 
 module.exports = LdpStore

@@ -1,60 +1,99 @@
 /* global describe, it */
+var mimeTypeUtil = require('rdf-mime-type-util')
 var rdf = require('rdf-ext')
 var LdpStore = require('../')
 var assert = require('assert')
 
 var createClient = function (buildResponse) {
   return function (method, url, headers, content, callback) {
-    var res = null
+    return new Promise(function (resolve, reject) {
+      callback = callback || function () {}
 
-    if (buildResponse) {
-      res = buildResponse({
-        method: method,
-        url: url,
-        headers: headers,
-        content: content
-      })
-    }
+      var res = null
 
-    res = res || {}
-    res.statusCode = res.statusCode !== undefined ? res.statusCode : 200
-    res.headers = res.headers || {}
-    res.content = res.content || ''
+      if (buildResponse) {
+        res = buildResponse({
+          method: method,
+          url: url,
+          headers: headers,
+          content: content
+        })
+      }
 
-    callback(res.statusCode, res.headers, res.content, res.error)
+      res = res || {}
+      res.statusCode = res.statusCode !== undefined ? res.statusCode : 200
+      res.headers = res.headers || {}
+      res.content = res.content || ''
+
+      callback(res.statusCode, res.headers, res.content, res.error)
+
+      if (!res.error) {
+        resolve({
+          statusCode: res.statusCode,
+          headers: res.headers,
+          content: res.content
+        })
+      } else {
+        reject(res.error)
+      }
+    })
   }
 }
 
 var createParser = function (buildGraphData) {
-  return function (content, callback, base) {
-    var graphData = null
+  return {
+    parse: function (content, callback, base) {
+      return new Promise(function (resolve, reject) {
+        callback = callback || function () {}
 
-    if (buildGraphData) {
-      graphData = buildGraphData({
-        content: content,
-        base: base
+        var graphData = null
+
+        if (buildGraphData) {
+          graphData = buildGraphData({
+            content: content,
+            base: base
+          })
+        }
+
+        graphData = graphData || {graph: rdf.createGraph()}
+
+        callback(graphData.error, graphData.graph)
+
+        if (!graphData.error) {
+          resolve(graphData.graph)
+        } else {
+          reject(graphData.error)
+        }
       })
     }
-
-    graphData = graphData || {graph: rdf.createGraph()}
-
-    callback(graphData.error, graphData.graph)
   }
 }
 
 var createSerializer = function (buildSerializedData) {
-  return function (graph, callback) {
-    var serializedData = null
+  return {
+    serialize: function (graph, callback) {
+      return new Promise(function (resolve, reject) {
+        callback = callback || function () {}
 
-    if (buildSerializedData) {
-      serializedData = buildSerializedData({
-        graph: graph
+        var serializedData = null
+
+        if (buildSerializedData) {
+          serializedData = buildSerializedData({
+            graph: graph
+          })
+        }
+
+        serializedData = serializedData || {content: ''}
+
+        callback(serializedData.content, serializedData.error)
+
+        if (!serializedData.error) {
+          resolve(serializedData.content)
+        } else {
+          reject(serializedData.error)
+        }
       })
     }
-
-    serializedData = serializedData || {content: ''}
-
-    callback(serializedData.content, serializedData.error)
   }
 }
 
@@ -65,16 +104,18 @@ describe('LdpStore', function () {
         request: createClient(function (req) {
           assert.equal(req.method, 'GET')
         }),
-        parsers: {
+        parsers: new mimeTypeUtil.ParserUtil({
           '1': createParser()
-        },
+        }),
         defaultParser: '1'
       }
 
-      var store = new LdpStore(rdf, options)
+      var store = new LdpStore(options)
 
-      store.graph('http://example.org/', function () {
+      store.graph('http://example.org/').then(function () {
         done()
+      }).catch(function (error) {
+        done(error)
       })
     })
 
@@ -83,16 +124,18 @@ describe('LdpStore', function () {
         request: createClient(function (req) {
           assert.equal(req.headers.Accept, 'application/ld+json, text/turtle')
         }),
-        parsers: {
+        parsers: new mimeTypeUtil.ParserUtil({
           'application/ld+json': null,
           'text/turtle': createParser()
-        }
+        })
       }
 
-      var store = new LdpStore(rdf, options)
+      var store = new LdpStore(options)
 
-      store.graph('http://example.org/', function () {
+      store.graph('http://example.org/').then(function () {
         done()
+      }).catch(function (error) {
+        done(error)
       })
     })
 
@@ -103,12 +146,11 @@ describe('LdpStore', function () {
         })
       }
 
-      var store = new LdpStore(rdf, options)
+      var store = new LdpStore(options)
 
-      store.graph('http://example.org/', function (error, graph) {
-        assert(!graph)
-        assert(!!error)
-
+      store.graph('http://example.org/').then(function () {
+        done('no error thrown')
+      }).catch(function () {
         done()
       })
     })
@@ -120,12 +162,11 @@ describe('LdpStore', function () {
         })
       }
 
-      var store = new LdpStore(rdf, options)
+      var store = new LdpStore(options)
 
-      store.graph('http://example.org/', function (error, graph) {
-        assert(!graph)
-        assert(!!error)
-
+      store.graph('http://example.org/').then(function () {
+        done('no error thrown')
+      }).catch(function () {
         done()
       })
     })
@@ -135,13 +176,13 @@ describe('LdpStore', function () {
         request: createClient(function () {
           return {statusCode: 0}
         }),
-        parsers: {
+        parsers: new mimeTypeUtil.ParserUtil({
           '1': createParser()
-        },
+        }),
         defaultParser: '1'
       }
 
-      var store = new LdpStore(rdf, options)
+      var store = new LdpStore(options)
 
       store.graph('http://example.org/', function (error, graph) {
         assert(!!graph)
@@ -154,21 +195,23 @@ describe('LdpStore', function () {
     it('should use default content type if none given', function (done) {
       var options = {
         request: createClient(),
-        parsers: {
+        parsers: new mimeTypeUtil.ParserUtil({
           '1': createParser(function () {
             assert(false)
           }),
           '2': createParser(function () {
             assert(true)
           })
-        },
+        }),
         defaultParser: '2'
       }
 
-      var store = new LdpStore(rdf, options)
+      var store = new LdpStore(options)
 
-      store.graph('http://example.org/', function () {
+      store.graph('http://example.org/').then(function () {
         done()
+      }).catch(function (error) {
+        done(error)
       })
     })
 
@@ -177,21 +220,23 @@ describe('LdpStore', function () {
         request: createClient(function () {
           return {headers: {'content-type': '3'}}
         }),
-        parsers: {
+        parsers: new mimeTypeUtil.ParserUtil({
           '1': createParser(function () {
             assert(false)
           }),
           '2': createParser(function () {
             assert(true)
           })
-        },
+        }),
         defaultParser: '2'
       }
 
-      var store = new LdpStore(rdf, options)
+      var store = new LdpStore(options)
 
-      store.graph('http://example.org/', function () {
+      store.graph('http://example.org/').then(function () {
         done()
+      }).catch(function (error) {
+        done(error)
       })
     })
 
@@ -200,62 +245,65 @@ describe('LdpStore', function () {
         request: createClient(function () {
           return {headers: {'content-type': '2'}}
         }),
-        parsers: {
+        parsers: new mimeTypeUtil.ParserUtil({
           '1': createParser(function () {
             assert(false)
           }),
           '2': createParser(function () {
             assert(true)
           })
-        }
+        })
       }
 
-      var store = new LdpStore(rdf, options)
+      var store = new LdpStore(options)
 
-      store.graph('http://example.org/', function () {
+      store.graph('http://example.org/').then(function () {
         done()
+      }).catch(function (error) {
+        done(error)
       })
     })
 
-    it('should ignore content type header if forceContentType is set', function (done) {
+    it('should ignore content type header if contentType option is used', function (done) {
       var options = {
         request: createClient(function () {
           return {headers: {'content-type': '1'}}
         }),
-        parsers: {
+        parsers: new mimeTypeUtil.ParserUtil({
           '1': createParser(function () {
             assert(false)
           }),
           '2': createParser(function () {
             assert(true)
           })
-        }
+        })
       }
 
-      var store = new LdpStore(rdf, options)
+      var store = new LdpStore(options)
 
-      store.graph('http://example.org/', function () {
+      store.graph('http://example.org/', null, {contentType: '2'}).then(function () {
         done()
-      }, {forceContentType: '2'})
+      }).catch(function (error) {
+        done(error)
+      })
     })
 
     it('should handle parser error', function (done) {
       var options = {
         request: createClient(),
-        parsers: {
+        parsers: new mimeTypeUtil.ParserUtil({
           '1': createParser(function () {
             return {graph: null, error: 'error'}
           })
-        },
+        }),
         defaultParser: '1'
       }
 
-      var store = new LdpStore(rdf, options)
+      var store = new LdpStore(options)
 
-      store.graph('http://example.org/', function (error, graph) {
-        assert(!graph)
-        assert(!!error)
-
+      store.graph('http://example.org/').then(function () {
+        done('no error thrown')
+      }).catch(function () {
         done()
       })
     })
@@ -263,42 +311,42 @@ describe('LdpStore', function () {
     it('should use parsers base parameter', function (done) {
       var options = {
         request: createClient(),
-        parsers: {
+        parsers: new mimeTypeUtil.ParserUtil({
           '1': createParser(function (serializedData) {
             assert.equal(serializedData.base, 'http://example.org/')
           })
-        },
+        }),
         defaultParser: '1'
       }
 
-      var store = new LdpStore(rdf, options)
+      var store = new LdpStore(options)
 
-      store.graph('http://example.org/', function (error, graph) {
-        assert(!!graph)
-        assert(!error)
-
+      store.graph('http://example.org/').then(function () {
         done()
+      }).catch(function (error) {
+        done(error)
       })
     })
 
     it('should return a graph object', function (done) {
       var options = {
         request: createClient(),
-        parsers: {
+        parsers: new mimeTypeUtil.ParserUtil({
           '1': createParser()
-        },
+        }),
         defaultParser: '1'
       }
 
-      var store = new LdpStore(rdf, options)
+      var store = new LdpStore(options)
 
-      store.graph('http://example.org/', function (error, graph) {
+      store.graph('http://example.org/').then(function (graph) {
         assert.equal(typeof graph, 'object')
         assert.equal(graph.length, 0)
         assert.equal(typeof graph.match, 'function')
-        assert(!error)
 
         done()
+      }).catch(function (error) {
+        done(error)
       })
     })
 
@@ -307,20 +355,19 @@ describe('LdpStore', function () {
         request: createClient(function () {
           return {headers: {'etag': 'test'}}
         }),
-        parsers: {
+        parsers: new mimeTypeUtil.ParserUtil({
           '1': createParser()
-        },
+        }),
         defaultParser: '1'
       }
 
-      var store = new LdpStore(rdf, options)
+      var store = new LdpStore(options)
 
-      store.graph('http://example.org/', function (error, graph) {
-        assert.equal(graph.etag, 'test')
-        assert(!error)
-
+      store.graph('http://example.org/', null, {useEtag: true}).then(function () {
         done()
-      }, {useEtag: true})
+      }).catch(function (error) {
+        done(error)
+      })
     })
   })
 
@@ -332,12 +379,11 @@ describe('LdpStore', function () {
         })
       }
 
-      var store = new LdpStore(rdf, options)
+      var store = new LdpStore(options)
 
-      store.match('http://example.org/', null, null, null, function (error, graph) {
-        assert(!graph)
-        assert(!!error)
-
+      store.match(null, null, null, 'http://example.org/').then(function () {
+        done('no error thrown')
+      }).catch(function () {
         done()
       })
     })
@@ -345,7 +391,7 @@ describe('LdpStore', function () {
     it('should forward parameters to graphs .match method', function (done) {
       var options = {
         request: createClient(),
-        parsers: {
+        parsers: new mimeTypeUtil.ParserUtil({
           '1': createParser(function () {
             return {
               graph: {
@@ -357,35 +403,38 @@ describe('LdpStore', function () {
               }
             }
           })
-        },
+        }),
         defaultParser: '1'
       }
 
-      var store = new LdpStore(rdf, options)
+      var store = new LdpStore(options)
 
-      store.match('http://example.org/', 's', 'p', 'o', function () {
+      store.match('s', 'p', 'o', 'http://example.org/').then(function () {
         done()
+      }).catch(function (error) {
+        done(error)
       })
     })
 
     it('should return a graph object', function (done) {
       var options = {
         request: createClient(),
-        parsers: {
+        parsers: new mimeTypeUtil.ParserUtil({
           '1': createParser()
-        },
+        }),
         defaultParser: '1'
       }
 
-      var store = new LdpStore(rdf, options)
+      var store = new LdpStore(options)
 
-      store.match('http://example.org/', null, null, null, function (error, graph) {
+      store.match(null, null, null, 'http://example.org/').then(function (graph) {
         assert.equal(typeof graph, 'object')
         assert.equal(graph.length, 0)
         assert.equal(typeof graph.match, 'function')
-        assert(!error)
 
         done()
+      }).catch(function (error) {
+        done(error)
       })
     })
   })
@@ -396,16 +445,18 @@ describe('LdpStore', function () {
         request: createClient(function (req) {
           assert.equal(req.method, 'PUT')
         }),
-        serializers: {
+        serializers: new mimeTypeUtil.SerializerUtil({
           '1': createSerializer()
-        },
+        }),
         defaultSerializer: '1'
       }
 
-      var store = new LdpStore(rdf, options)
+      var store = new LdpStore(options)
 
-      store.add('http://example.org/', null, function () {
+      store.add('http://example.org/').then(function () {
         done()
+      }).catch(function (error) {
+        done(error)
       })
     })
 
@@ -414,16 +465,18 @@ describe('LdpStore', function () {
         request: createClient(function (req) {
           assert.equal(req.headers['Content-Type'], '1')
         }),
-        serializers: {
+        serializers: new mimeTypeUtil.SerializerUtil({
           '1': createSerializer()
-        },
+        }),
         defaultSerializer: '1'
       }
 
-      var store = new LdpStore(rdf, options)
+      var store = new LdpStore(options)
 
-      store.add('http://example.org/', null, function () {
+      store.add('http://example.org/').then(function () {
         done()
+      }).catch(function (error) {
+        done(error)
       })
     })
 
@@ -432,17 +485,19 @@ describe('LdpStore', function () {
         request: createClient(function (req) {
           assert.equal(req.method, 'POST')
         }),
-        serializers: {
+        serializers: new mimeTypeUtil.SerializerUtil({
           '1': createSerializer()
-        },
+        }),
         defaultSerializer: '1'
       }
 
-      var store = new LdpStore(rdf, options)
+      var store = new LdpStore(options)
 
-      store.add('http://example.org/', null, function () {
+      store.add('http://example.org/', null, null, {method: 'POST'}).then(function () {
         done()
-      }, {method: 'POST'})
+      }).catch(function (error) {
+        done(error)
+      })
     })
 
     it('should use if-match header if etag is given', function (done) {
@@ -450,17 +505,19 @@ describe('LdpStore', function () {
         request: createClient(function (req) {
           assert.equal(req.headers['If-Match'], 'test')
         }),
-        serializers: {
+        serializers: new mimeTypeUtil.SerializerUtil({
           '1': createSerializer()
-        },
+        }),
         defaultSerializer: '1'
       }
 
-      var store = new LdpStore(rdf, options)
+      var store = new LdpStore(options)
 
-      store.add('http://example.org/', null, function () {
+      store.add('http://example.org/', null, null, {etag: 'test'}).then(function () {
         done()
-      }, {etag: 'test'})
+      }).catch(function (error) {
+        done(error)
+      })
     })
 
     it('should use if-match header if graph has a etag property and useEtag is set', function (done) {
@@ -468,17 +525,19 @@ describe('LdpStore', function () {
         request: createClient(function (req) {
           assert.equal(req.headers['If-Match'], 'test')
         }),
-        serializers: {
+        serializers: new mimeTypeUtil.SerializerUtil({
           '1': createSerializer()
-        },
+        }),
         defaultSerializer: '1'
       }
 
-      var store = new LdpStore(rdf, options)
+      var store = new LdpStore(options)
 
-      store.add('http://example.org/', {etag: 'test'}, function () {
+      store.add('http://example.org/', {etag: 'test'}, null, {useEtag: true}).then(function () {
         done()
-      }, {useEtag: true})
+      }).catch(function (error) {
+        done(error)
+      })
     })
 
     it('should not use if-match header if graph has a etag property, but useEtag is not set', function (done) {
@@ -486,36 +545,37 @@ describe('LdpStore', function () {
         request: createClient(function (req) {
           assert.notEqual(req.headers['If-Match'], 'test')
         }),
-        serializers: {
+        serializers: new mimeTypeUtil.SerializerUtil({
           '1': createSerializer()
-        },
+        }),
         defaultSerializer: '1'
       }
 
-      var store = new LdpStore(rdf, options)
+      var store = new LdpStore(options)
 
-      store.add('http://example.org/', {etag: 'test'}, function () {
+      store.add('http://example.org/', {etag: 'test'}).then(function () {
         done()
+      }).catch(function (error) {
+        done(error)
       })
     })
 
     it('should handle serializer error', function (done) {
       var options = {
         request: createClient(),
-        serializers: {
+        serializers: new mimeTypeUtil.SerializerUtil({
           '1': createSerializer(function () {
             return {error: 'error'}
           })
-        },
+        }),
         defaultSerializer: '1'
       }
 
-      var store = new LdpStore(rdf, options)
+      var store = new LdpStore(options)
 
-      store.add('http://example.org/', null, function (error, graph) {
-        assert(!graph)
-        assert(!!error)
-
+      store.add('http://example.org/').then(function () {
+        done('no error thrown')
+      }).catch(function () {
         done()
       })
     })
@@ -525,18 +585,17 @@ describe('LdpStore', function () {
         request: createClient(function () {
           return {error: 'error'}
         }),
-        serializers: {
+        serializers: new mimeTypeUtil.SerializerUtil({
           '1': createSerializer()
-        },
+        }),
         defaultSerializer: '1'
       }
 
-      var store = new LdpStore(rdf, options)
+      var store = new LdpStore(options)
 
-      store.add('http://example.org/', null, function (error, graph) {
-        assert(!graph)
-        assert(!!error)
-
+      store.add('http://example.org/').then(function () {
+        done('no error thrown')
+      }).catch(function () {
         done()
       })
     })
@@ -546,18 +605,17 @@ describe('LdpStore', function () {
         request: createClient(function () {
           return {statusCode: 500}
         }),
-        serializers: {
+        serializers: new mimeTypeUtil.SerializerUtil({
           '1': createSerializer()
-        },
+        }),
         defaultSerializer: '1'
       }
 
-      var store = new LdpStore(rdf, options)
+      var store = new LdpStore(options)
 
-      store.add('http://example.org/', null, function (error, graph) {
-        assert(!graph)
-        assert(!!error)
-
+      store.add('http://example.org/').then(function () {
+        done('no error thrown')
+      }).catch(function () {
         done()
       })
     })
@@ -565,19 +623,20 @@ describe('LdpStore', function () {
     it('should return the input graph object', function (done) {
       var options = {
         request: createClient(),
-        serializers: {
+        serializers: new mimeTypeUtil.SerializerUtil({
           '1': createSerializer()
-        },
+        }),
         defaultSerializer: '1'
       }
 
-      var store = new LdpStore(rdf, options)
+      var store = new LdpStore(options)
 
-      store.add('http://example.org/', 'test', function (error, graph) {
+      store.add('http://example.org/', 'test').then(function (graph) {
         assert.equal(graph, 'test')
-        assert(!error)
 
         done()
+      }).catch(function (error) {
+        done(error)
       })
     })
   })
@@ -588,16 +647,18 @@ describe('LdpStore', function () {
         request: createClient(function (req) {
           assert.equal(req.method, 'PATCH')
         }),
-        serializers: {
+        serializers: new mimeTypeUtil.SerializerUtil({
           '1': createSerializer()
-        },
+        }),
         defaultSerializer: '1'
       }
 
-      var store = new LdpStore(rdf, options)
+      var store = new LdpStore(options)
 
-      store.merge('http://example.org/', null, function () {
+      store.merge('http://example.org/').then(function () {
         done()
+      }).catch(function (error) {
+        done(error)
       })
     })
 
@@ -606,16 +667,18 @@ describe('LdpStore', function () {
         request: createClient(function (req) {
           assert.equal(req.headers['Content-Type'], '1')
         }),
-        serializers: {
+        serializers: new mimeTypeUtil.SerializerUtil({
           '1': createSerializer()
-        },
+        }),
         defaultSerializer: '1'
       }
 
-      var store = new LdpStore(rdf, options)
+      var store = new LdpStore(options)
 
-      store.merge('http://example.org/', null, function () {
+      store.merge('http://example.org/').then(function () {
         done()
+      }).catch(function (error) {
+        done(error)
       })
     })
 
@@ -624,17 +687,19 @@ describe('LdpStore', function () {
         request: createClient(function (req) {
           assert.equal(req.headers['If-Match'], 'test')
         }),
-        serializers: {
+        serializers: new mimeTypeUtil.SerializerUtil({
           '1': createSerializer()
-        },
+        }),
         defaultSerializer: '1'
       }
 
-      var store = new LdpStore(rdf, options)
+      var store = new LdpStore(options)
 
-      store.merge('http://example.org/', null, function () {
+      store.merge('http://example.org/', null, null, {etag: 'test'}).then(function () {
         done()
-      }, {etag: 'test'})
+      }).catch(function (error) {
+        done(error)
+      })
     })
 
     it('should use if-match header if graph has a etag property and useEtag is set', function (done) {
@@ -642,17 +707,19 @@ describe('LdpStore', function () {
         request: createClient(function (req) {
           assert.equal(req.headers['If-Match'], 'test')
         }),
-        serializers: {
+        serializers: new mimeTypeUtil.SerializerUtil({
           '1': createSerializer()
-        },
+        }),
         defaultSerializer: '1'
       }
 
-      var store = new LdpStore(rdf, options)
+      var store = new LdpStore(options)
 
-      store.merge('http://example.org/', {etag: 'test'}, function () {
+      store.merge('http://example.org/', {etag: 'test'}, null, {useEtag: true}).then(function () {
         done()
-      }, {useEtag: true})
+      }).catch(function (error) {
+        done(error)
+      })
     })
 
     it('should not use if-match header if graph has a etag property, but useEtag is not set', function (done) {
@@ -660,36 +727,37 @@ describe('LdpStore', function () {
         request: createClient(function (req) {
           assert.notEqual(req.headers['If-Match'], 'test')
         }),
-        serializers: {
+        serializers: new mimeTypeUtil.SerializerUtil({
           '1': createSerializer()
-        },
+        }),
         defaultSerializer: '1'
       }
 
-      var store = new LdpStore(rdf, options)
+      var store = new LdpStore(options)
 
-      store.merge('http://example.org/', {etag: 'test'}, function () {
+      store.merge('http://example.org/', {etag: 'test'}).then(function () {
         done()
+      }).catch(function (error) {
+        done(error)
       })
     })
 
     it('should handle serializer error', function (done) {
       var options = {
         request: createClient(),
-        serializers: {
+        serializers: new mimeTypeUtil.SerializerUtil({
           '1': createSerializer(function () {
             return {error: 'error'}
           })
-        },
+        }),
         defaultSerializer: '1'
       }
 
-      var store = new LdpStore(rdf, options)
+      var store = new LdpStore(options)
 
-      store.merge('http://example.org/', null, function (error, graph) {
-        assert(!graph)
-        assert(!!error)
-
+      store.merge('http://example.org/').then(function () {
+        done('no error thrown')
+      }).catch(function () {
         done()
       })
     })
@@ -699,18 +767,17 @@ describe('LdpStore', function () {
         request: createClient(function () {
           return {error: 'error'}
         }),
-        serializers: {
+        serializers: new mimeTypeUtil.SerializerUtil({
           '1': createSerializer()
-        },
+        }),
         defaultSerializer: '1'
       }
 
-      var store = new LdpStore(rdf, options)
+      var store = new LdpStore(options)
 
-      store.merge('http://example.org/', null, function (error, graph) {
-        assert(!graph)
-        assert(!!error)
-
+      store.merge('http://example.org/').then(function () {
+        done('no error thrown')
+      }).catch(function () {
         done()
       })
     })
@@ -720,18 +787,17 @@ describe('LdpStore', function () {
         request: createClient(function () {
           return {statusCode: 500}
         }),
-        serializers: {
+        serializers: new mimeTypeUtil.SerializerUtil({
           '1': createSerializer()
-        },
+        }),
         defaultSerializer: '1'
       }
 
-      var store = new LdpStore(rdf, options)
+      var store = new LdpStore(options)
 
-      store.merge('http://example.org/', null, function (error, graph) {
-        assert(!graph)
-        assert(!!error)
-
+      store.merge('http://example.org/').then(function () {
+        done('no error thrown')
+      }).catch(function () {
         done()
       })
     })
@@ -739,29 +805,22 @@ describe('LdpStore', function () {
     it('should return the input graph object', function (done) {
       var options = {
         request: createClient(),
-        serializers: {
+        serializers: new mimeTypeUtil.SerializerUtil({
           '1': createSerializer()
-        },
+        }),
         defaultSerializer: '1'
       }
 
-      var store = new LdpStore(rdf, options)
+      var store = new LdpStore(options)
 
-      store.merge('http://example.org/', 'test', function (error, graph) {
-        assert.equal(graph, 'test')
-        assert(!error)
+      store.merge('http://example.org/', 'test').then(function (data) {
+        assert.equal(data, 'test')
 
         done()
+      }).catch(function (error) {
+        done(error)
       })
     })
-  })
-
-  describe('remove method', function () {
-
-  })
-
-  describe('removeMatches method', function () {
-
   })
 
   describe('delete method', function () {
@@ -772,10 +831,12 @@ describe('LdpStore', function () {
         })
       }
 
-      var store = new LdpStore(rdf, options)
+      var store = new LdpStore(options)
 
-      store.delete('http://example.org/', function () {
+      store.delete('http://example.org/').then(function () {
         done()
+      }).catch(function (error) {
+        done(error)
       })
     })
 
@@ -786,11 +847,11 @@ describe('LdpStore', function () {
         })
       }
 
-      var store = new LdpStore(rdf, options)
+      var store = new LdpStore(options)
 
-      store.delete('http://example.org/', function (error) {
-        assert(!!error)
-
+      store.delete('http://example.org/').then(function () {
+        done('no error thrown')
+      }).catch(function () {
         done()
       })
     })
@@ -802,25 +863,11 @@ describe('LdpStore', function () {
         })
       }
 
-      var store = new LdpStore(rdf, options)
+      var store = new LdpStore(options)
 
-      store.delete('http://example.org/', function (error) {
-        assert(!!error)
-
-        done()
-      })
-    })
-
-    it('should return no error on success', function (done) {
-      var options = {
-        request: createClient()
-      }
-
-      var store = new LdpStore(rdf, options)
-
-      store.delete('http://example.org/', function (error) {
-        assert(!error)
-
+      store.delete('http://example.org/').then(function () {
+        done('no error thrown')
+      }).catch(function () {
         done()
       })
     })

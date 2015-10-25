@@ -22,8 +22,12 @@
     "url": "https://github.com/rdf-ext/rdf-store-ldp/issues"
   },
   "homepage": "https://github.com/rdf-ext/rdf-store-ldp",
+  "dependencies": {
+    "rdf-ext": "^0.3.0",
+    "rdf-mime-type-util": "^0.1.0",
+    "rdf-store-abstract": "^0.1.0"
+  },
   "devDependencies": {
-    "mocha": "^2.2.5",
-    "rdf-ext": "^0.2.6"
+    "mocha": "^2.2.5"
   }
 }
