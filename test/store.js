@@ -872,4 +872,29 @@ describe('LdpStore', function () {
       })
     })
   })
+
+  describe('example data', function () {
+    it('.add should send serialized JSON-LD', function (done) {
+      var graph = rdf.createGraph([
+        rdf.createTriple(
+          rdf.createNamedNode('http://example.org/subject'),
+          rdf.createNamedNode('http://example.org/predicate'),
+          rdf.createLiteral('object'))])
+
+      var options = {
+        request: createClient(function (req) {
+          assert.equal(req.content, '[{"@id":"http://example.org/subject","http://example.org/predicate":"object"}]')
+        }),
+        defaultSerializer: 'application/ld+json'
+      }
+
+      var store = new LdpStore(options)
+
+      store.add('http://example.org/', graph).then(function () {
+        done()
+      }).catch(function (error) {
+        done(error)
+      })
+    })
+  })
 })
