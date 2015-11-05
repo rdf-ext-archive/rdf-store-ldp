@@ -1,10 +1,11 @@
 {
   "name": "rdf-store-ldp",
-  "version": "0.1.2",
+  "version": "0.3.0-rc1",
   "description": "Restfull LDP RDF Store that follows the RDF Interface specification",
   "main": "index.js",
   "scripts": {
-    "test": "./node_modules/mocha/bin/mocha ./test"
+    "lint": "standard",
+    "test": "node_modules/.bin/mocha"
   },
   "repository": {
     "type": "git",
@@ -23,11 +24,11 @@
   },
   "homepage": "https://github.com/rdf-ext/rdf-store-ldp",
   "dependencies": {
-    "rdf-ext": "^0.3.0",
-    "rdf-mime-type-util": "^0.1.0",
-    "rdf-store-abstract": "^0.1.0"
+    "rdf-ext": "^0.3.0-rc1",
+    "rdf-mime-type-util": "^0.3.0-rc1",
+    "rdf-store-abstract": "^0.3.0-rc1"
   },
   "devDependencies": {
-    "mocha": "^2.2.5"
+    "mocha": "^2.3.3"
   }
 }
