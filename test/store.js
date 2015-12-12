@@ -1,5 +1,4 @@
 /* global describe, it */
-var mimeTypeUtil = require('rdf-mime-type-util')
 var rdf = require('rdf-ext')
 var LdpStore = require('../')
 var assert = require('assert')
@@ -104,7 +103,7 @@ describe('LdpStore', function () {
         request: createClient(function (req) {
           assert.equal(req.method, 'GET')
         }),
-        parsers: new mimeTypeUtil.ParserUtil({
+        parsers: new rdf.Parsers({
           '1': createParser()
         }),
         defaultParser: '1'
@@ -124,7 +123,7 @@ describe('LdpStore', function () {
         request: createClient(function (req) {
           assert.equal(req.headers.Accept, 'application/ld+json, text/turtle')
         }),
-        parsers: new mimeTypeUtil.ParserUtil({
+        parsers: new rdf.Parsers({
           'application/ld+json': null,
           'text/turtle': createParser()
         })
@@ -176,7 +175,7 @@ describe('LdpStore', function () {
         request: createClient(function () {
           return {statusCode: 0}
         }),
-        parsers: new mimeTypeUtil.ParserUtil({
+        parsers: new rdf.Parsers({
           '1': createParser()
         }),
         defaultParser: '1'
@@ -195,7 +194,7 @@ describe('LdpStore', function () {
     it('should use default content type if none given', function (done) {
       var options = {
         request: createClient(),
-        parsers: new mimeTypeUtil.ParserUtil({
+        parsers: new rdf.Parsers({
           '1': createParser(function () {
             assert(false)
           }),
@@ -220,7 +219,7 @@ describe('LdpStore', function () {
         request: createClient(function () {
           return {headers: {'content-type': '3'}}
         }),
-        parsers: new mimeTypeUtil.ParserUtil({
+        parsers: new rdf.Parsers({
           '1': createParser(function () {
             assert(false)
           }),
@@ -245,7 +244,7 @@ describe('LdpStore', function () {
         request: createClient(function () {
           return {headers: {'content-type': '2'}}
         }),
-        parsers: new mimeTypeUtil.ParserUtil({
+        parsers: new rdf.Parsers({
           '1': createParser(function () {
             assert(false)
           }),
@@ -269,7 +268,7 @@ describe('LdpStore', function () {
         request: createClient(function () {
           return {headers: {'content-type': '1'}}
         }),
-        parsers: new mimeTypeUtil.ParserUtil({
+        parsers: new rdf.Parsers({
           '1': createParser(function () {
             assert(false)
           }),
@@ -291,7 +290,7 @@ describe('LdpStore', function () {
     it('should handle parser error', function (done) {
       var options = {
         request: createClient(),
-        parsers: new mimeTypeUtil.ParserUtil({
+        parsers: new rdf.Parsers({
           '1': createParser(function () {
             return {graph: null, error: 'error'}
           })
@@ -311,7 +310,7 @@ describe('LdpStore', function () {
     it('should use parsers base parameter', function (done) {
       var options = {
         request: createClient(),
-        parsers: new mimeTypeUtil.ParserUtil({
+        parsers: new rdf.Parsers({
           '1': createParser(function (serializedData) {
             assert.equal(serializedData.base, 'http://example.org/')
           })
@@ -331,7 +330,7 @@ describe('LdpStore', function () {
     it('should return a graph object', function (done) {
       var options = {
         request: createClient(),
-        parsers: new mimeTypeUtil.ParserUtil({
+        parsers: new rdf.Parsers({
           '1': createParser()
         }),
         defaultParser: '1'
@@ -355,7 +354,7 @@ describe('LdpStore', function () {
         request: createClient(function () {
           return {headers: {'etag': 'test'}}
         }),
-        parsers: new mimeTypeUtil.ParserUtil({
+        parsers: new rdf.Parsers({
           '1': createParser()
         }),
         defaultParser: '1'
@@ -391,7 +390,7 @@ describe('LdpStore', function () {
     it('should forward parameters to graphs .match method', function (done) {
       var options = {
         request: createClient(),
-        parsers: new mimeTypeUtil.ParserUtil({
+        parsers: new rdf.Parsers({
           '1': createParser(function () {
             return {
               graph: {
@@ -419,7 +418,7 @@ describe('LdpStore', function () {
     it('should return a graph object', function (done) {
       var options = {
         request: createClient(),
-        parsers: new mimeTypeUtil.ParserUtil({
+        parsers: new rdf.Parsers({
           '1': createParser()
         }),
         defaultParser: '1'
@@ -445,7 +444,7 @@ describe('LdpStore', function () {
         request: createClient(function (req) {
           assert.equal(req.method, 'PUT')
         }),
-        serializers: new mimeTypeUtil.SerializerUtil({
+        serializers: new rdf.Serializers({
           '1': createSerializer()
         }),
         defaultSerializer: '1'
@@ -465,7 +464,7 @@ describe('LdpStore', function () {
         request: createClient(function (req) {
           assert.equal(req.headers['Content-Type'], '1')
         }),
-        serializers: new mimeTypeUtil.SerializerUtil({
+        serializers: new rdf.Serializers({
           '1': createSerializer()
         }),
         defaultSerializer: '1'
@@ -485,7 +484,7 @@ describe('LdpStore', function () {
         request: createClient(function (req) {
           assert.equal(req.method, 'POST')
         }),
-        serializers: new mimeTypeUtil.SerializerUtil({
+        serializers: new rdf.Serializers({
           '1': createSerializer()
         }),
         defaultSerializer: '1'
@@ -505,7 +504,7 @@ describe('LdpStore', function () {
         request: createClient(function (req) {
           assert.equal(req.headers['If-Match'], 'test')
         }),
-        serializers: new mimeTypeUtil.SerializerUtil({
+        serializers: new rdf.Serializers({
           '1': createSerializer()
         }),
         defaultSerializer: '1'
@@ -525,7 +524,7 @@ describe('LdpStore', function () {
         request: createClient(function (req) {
           assert.equal(req.headers['If-Match'], 'test')
         }),
-        serializers: new mimeTypeUtil.SerializerUtil({
+        serializers: new rdf.Serializers({
           '1': createSerializer()
         }),
         defaultSerializer: '1'
@@ -545,7 +544,7 @@ describe('LdpStore', function () {
         request: createClient(function (req) {
           assert.notEqual(req.headers['If-Match'], 'test')
         }),
-        serializers: new mimeTypeUtil.SerializerUtil({
+        serializers: new rdf.Serializers({
           '1': createSerializer()
         }),
         defaultSerializer: '1'
@@ -563,7 +562,7 @@ describe('LdpStore', function () {
     it('should handle serializer error', function (done) {
       var options = {
         request: createClient(),
-        serializers: new mimeTypeUtil.SerializerUtil({
+        serializers: new rdf.Serializers({
           '1': createSerializer(function () {
             return {error: 'error'}
           })
@@ -585,7 +584,7 @@ describe('LdpStore', function () {
         request: createClient(function () {
           return {error: 'error'}
         }),
-        serializers: new mimeTypeUtil.SerializerUtil({
+        serializers: new rdf.Serializers({
           '1': createSerializer()
         }),
         defaultSerializer: '1'
@@ -605,7 +604,7 @@ describe('LdpStore', function () {
         request: createClient(function () {
           return {statusCode: 500}
         }),
-        serializers: new mimeTypeUtil.SerializerUtil({
+        serializers: new rdf.Serializers({
           '1': createSerializer()
         }),
         defaultSerializer: '1'
@@ -623,7 +622,7 @@ describe('LdpStore', function () {
     it('should return the input graph object', function (done) {
       var options = {
         request: createClient(),
-        serializers: new mimeTypeUtil.SerializerUtil({
+        serializers: new rdf.Serializers({
           '1': createSerializer()
         }),
         defaultSerializer: '1'
@@ -647,7 +646,7 @@ describe('LdpStore', function () {
         request: createClient(function (req) {
           assert.equal(req.method, 'PATCH')
         }),
-        serializers: new mimeTypeUtil.SerializerUtil({
+        serializers: new rdf.Serializers({
           '1': createSerializer()
         }),
         defaultSerializer: '1'
@@ -667,7 +666,7 @@ describe('LdpStore', function () {
         request: createClient(function (req) {
           assert.equal(req.headers['Content-Type'], '1')
         }),
-        serializers: new mimeTypeUtil.SerializerUtil({
+        serializers: new rdf.Serializers({
           '1': createSerializer()
         }),
         defaultSerializer: '1'
@@ -687,7 +686,7 @@ describe('LdpStore', function () {
         request: createClient(function (req) {
           assert.equal(req.headers['If-Match'], 'test')
         }),
-        serializers: new mimeTypeUtil.SerializerUtil({
+        serializers: new rdf.Serializers({
           '1': createSerializer()
         }),
         defaultSerializer: '1'
@@ -707,7 +706,7 @@ describe('LdpStore', function () {
         request: createClient(function (req) {
           assert.equal(req.headers['If-Match'], 'test')
         }),
-        serializers: new mimeTypeUtil.SerializerUtil({
+        serializers: new rdf.Serializers({
           '1': createSerializer()
         }),
         defaultSerializer: '1'
@@ -727,7 +726,7 @@ describe('LdpStore', function () {
         request: createClient(function (req) {
           assert.notEqual(req.headers['If-Match'], 'test')
         }),
-        serializers: new mimeTypeUtil.SerializerUtil({
+        serializers: new rdf.Serializers({
           '1': createSerializer()
         }),
         defaultSerializer: '1'
@@ -745,7 +744,7 @@ describe('LdpStore', function () {
     it('should handle serializer error', function (done) {
       var options = {
         request: createClient(),
-        serializers: new mimeTypeUtil.SerializerUtil({
+        serializers: new rdf.Serializers({
           '1': createSerializer(function () {
             return {error: 'error'}
           })
@@ -767,7 +766,7 @@ describe('LdpStore', function () {
         request: createClient(function () {
           return {error: 'error'}
         }),
-        serializers: new mimeTypeUtil.SerializerUtil({
+        serializers: new rdf.Serializers({
           '1': createSerializer()
         }),
         defaultSerializer: '1'
@@ -787,7 +786,7 @@ describe('LdpStore', function () {
         request: createClient(function () {
           return {statusCode: 500}
         }),
-        serializers: new mimeTypeUtil.SerializerUtil({
+        serializers: new rdf.Serializers({
           '1': createSerializer()
         }),
         defaultSerializer: '1'
@@ -805,7 +804,7 @@ describe('LdpStore', function () {
     it('should return the input graph object', function (done) {
       var options = {
         request: createClient(),
-        serializers: new mimeTypeUtil.SerializerUtil({
+        serializers: new rdf.Serializers({
           '1': createSerializer()
         }),
         defaultSerializer: '1'

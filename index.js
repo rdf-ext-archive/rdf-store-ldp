@@ -1,7 +1,8 @@
-var mimeTypeUtil = require('rdf-mime-type-util')
 var rdf = require('rdf-ext')
 var util = require('util')
 var AbstractStore = require('rdf-store-abstract')
+
+require('rdf-formats-common')
 
 function httpSuccess (statusCode) {
   return (statusCode >= 200 && statusCode < 300)
@@ -10,8 +11,8 @@ function httpSuccess (statusCode) {
 function LdpStore (options) {
   options = options || {}
 
-  this.parsers = options.parsers || mimeTypeUtil.parsers
-  this.serializers = options.serializers || mimeTypeUtil.serializers
+  this.parsers = options.parsers || rdf.parsers
+  this.serializers = options.serializers || rdf.serializers
   this.defaultParser = options.defaultParser || 'text/turtle'
   this.defaultSerializer = options.defaultSerializer || 'text/turtle'
   this.defaultPatchSerializer = options.defaultPatchSerializer || options.defaultSerializer || 'text/turtle'
