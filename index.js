@@ -11,8 +11,8 @@ function httpSuccess (statusCode) {
 function LdpStore (options) {
   options = options || {}
 
-  this.parsers = options.parsers || rdf.parsers
-  this.serializers = options.serializers || rdf.serializers
+  this.parsers = options.parsers ? new rdf.Parsers(options.parsers) : rdf.parsers
+  this.serializers = options.serializers ? new rdf.Serializers(options.serializers) : rdf.serializers
   this.defaultParser = options.defaultParser || 'text/turtle'
   this.defaultSerializer = options.defaultSerializer || 'text/turtle'
   this.defaultPatchSerializer = options.defaultPatchSerializer || options.defaultSerializer || 'text/turtle'
