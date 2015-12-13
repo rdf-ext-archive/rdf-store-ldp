@@ -1,6 +1,6 @@
 {
   "name": "rdf-store-ldp",
-  "version": "0.3.0-rc4",
+  "version": "0.3.0-rc5",
   "description": "Restfull LDP RDF Store that follows the RDF Interface specification",
   "main": "index.js",
   "scripts": {
@@ -25,7 +25,7 @@
   "homepage": "https://github.com/rdf-ext/rdf-store-ldp",
   "dependencies": {
     "rdf-ext": "^0.3.0-rc1",
-    "rdf-formats-common": "^0.3.0-rc4",
+    "rdf-formats-common": "^0.3.0-rc5",
     "rdf-store-abstract": "^0.3.0-rc1"
   },
   "devDependencies": {

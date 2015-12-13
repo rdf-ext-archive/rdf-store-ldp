@@ -2,7 +2,7 @@ var rdf = require('rdf-ext')
 var util = require('util')
 var AbstractStore = require('rdf-store-abstract')
 
-require('rdf-formats-common')
+require('rdf-formats-common')(rdf)
 
 function httpSuccess (statusCode) {
   return (statusCode >= 200 && statusCode < 300)
