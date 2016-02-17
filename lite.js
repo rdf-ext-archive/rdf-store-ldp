@@ -1,5 +1,5 @@
 var rdf = require('rdf-ext')
-var util = require('util')
+var inherits = require('inherits')
 var AbstractStore = require('rdf-store-abstract')
 
 function httpSuccess (statusCode) {
@@ -17,7 +17,7 @@ function LdpStore (options) {
   this.request = options.request || rdf.defaultRequest
 }
 
-util.inherits(LdpStore, AbstractStore)
+inherits(LdpStore, AbstractStore)
 
 LdpStore.prototype.add = function (iri, graph, callback, options) {
   var self = this

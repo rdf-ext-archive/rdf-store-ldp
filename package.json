@@ -24,6 +24,7 @@
   },
   "homepage": "https://github.com/rdf-ext/rdf-store-ldp",
   "dependencies": {
+    "inherits": "^2.0.1",
     "rdf-ext": "^0.3.0",
     "rdf-formats-common": "^0.3.0",
     "rdf-store-abstract": "^0.3.0"
