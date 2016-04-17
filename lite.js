@@ -45,7 +45,7 @@ LdpStore.prototype.add = function (iri, graph, callback, options) {
     }
 
     self.serializers.serialize(contentType, graph).then(function (data) {
-      return self.request(method, iri, headers, data).then(function (res) {
+      return self.request(method, iri, headers, data, null, options).then(function (res) {
         if (!httpSuccess(res.statusCode)) {
           callback('status code error: ' + res.statusCode)
           return Promise.reject('status code error: ' + res.statusCode)
@@ -61,13 +61,13 @@ LdpStore.prototype.add = function (iri, graph, callback, options) {
   })
 }
 
-LdpStore.prototype.delete = function (iri, callback) {
+LdpStore.prototype.delete = function (iri, callback, options) {
   var self = this
 
   return new Promise(function (resolve, reject) {
     callback = callback || function () {}
 
-    self.request('DELETE', iri, {}, null).then(function (res) {
+    self.request('DELETE', iri, {}, null, null, options).then(function (res) {
       if (!httpSuccess(res.statusCode)) {
         callback('status code error: ' + res.statusCode)
         return Promise.reject('status code error: ' + res.statusCode)
@@ -89,7 +89,7 @@ LdpStore.prototype.graph = function (iri, callback, options) {
     callback = callback || function () {}
     options = options || {}
 
-    self.request('GET', iri, {'Accept': self.parsers.list().join(', ')}).then(function (res) {
+    self.request('GET', iri, {'Accept': self.parsers.list().join(', ')}, null, null, options).then(function (res) {
       // also test for status code != 0 for local browser requests
       if (!httpSuccess(res.statusCode) && res.statusCode !== 0) {
         callback('status code error: ' + res.statusCode)
@@ -147,7 +147,7 @@ LdpStore.prototype.merge = function (iri, graph, callback, options) {
     }
 
     self.serializers.serialize(contentType, graph).then(function (data) {
-      return self.request('PATCH', iri, headers, data).then(function (res) {
+      return self.request('PATCH', iri, headers, data, null, options).then(function (res) {
         if (!httpSuccess(res.statusCode)) {
           callback('status code error: ' + res.statusCode)
           return Promise.reject('status code error: ' + res.statusCode)
