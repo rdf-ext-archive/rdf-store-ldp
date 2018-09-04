@@ -1,3 +1,5 @@
+# This package is no longer maintained and not compatible with the latest RDF-Ext version. Similar functionality can be found in the [rdf-store-web](https://github.com/rdf-ext/rdf-store-web) package.
+
 # rdf-store-ldp
 
 [![Build Status](https://travis-ci.org/rdf-ext/rdf-store-ldp.svg?branch=master)](https://travis-ci.org/rdf-ext/rdf-store-ldp)
